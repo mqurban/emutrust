@@ -8,3 +8,4 @@ dist/
 .ruff_cache/
 .ipynb_checkpoints/
 *.npz
+!examples/camb/data/*.npz

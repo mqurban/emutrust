@@ -54,13 +54,16 @@ t0 = time.perf_counter()
 for _ in range(50):
     like(batch)
 per_eval = (time.perf_counter() - t0) / (50 * N_WALKERS)
-print(f"One CAMB call:                  {training.seconds_per_run:.3f} s")
+# CAMB's cost, measured during generate.py; take the faster of the two runs
+# so the speed-up below is not inflated by a busy machine.
+camb_cost = min(training.seconds_per_run, validation.seconds_per_run)
+print(f"One CAMB call:                  {camb_cost:.3f} s")
 print(f"One emulator likelihood eval:   {1e3 * per_eval:.3f} ms (batches of {N_WALKERS})")
-print(f"Speed-up:                       {training.seconds_per_run / per_eval:,.0f}x")
+print(f"Speed-up:                       {camb_cost / per_eval:,.0f}x")
 n_evals = N_WALKERS * N_STEPS
 print(
     f"An MCMC run of {n_evals:,} evaluations: {n_evals * per_eval:.0f} s with the emulator, "
-    f"about {n_evals * training.seconds_per_run / 3600:.0f} h with CAMB in the loop\n"
+    f"about {n_evals * camb_cost / 3600:.0f} h with CAMB in the loop\n"
 )
 
 # ------------------------------------------------------------- 4. coverage
