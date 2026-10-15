@@ -2,7 +2,7 @@
 
 **Neural network emulators for slow scientific models, with calibrated uncertainty you can trust in Bayesian inference.**
 
-> **Status:** early development (`0.1.0.dev0`). Training-set generation, the ensemble emulator, the validation report and the likelihood are working and tested; the CAMB demonstration and packaging are next. See the [roadmap](#roadmap).
+> **Status:** early development (`0.1.0.dev0`). Training-set generation, the ensemble emulator, the validation report and the likelihood are working, tested, and demonstrated on CAMB; documentation and packaging are next. See the [roadmap](#roadmap).
 
 ## The problem
 
@@ -153,19 +153,62 @@ The likelihood compares the data with the emulator's prediction using a covarian
 
 Parameters outside the range the emulator was trained on are rejected, so the sampler never relies on extrapolation.
 
-**Does it work? A coverage test.** [`examples/coverage_test.py`](examples/coverage_test.py) simulates 30 observations with known true parameters (50 data points each, 1% noise), infers the parameters through a deliberately imperfect emulator (80 training runs), and counts how often the reported 68% interval contains the truth. Honest error bars contain it about 68% of the time:
+**Does it work? A coverage test.** [`examples/coverage_test.py`](examples/coverage_test.py) simulates 30 observations with true parameters drawn from the prior (50 data points each, 1% noise), infers the parameters through a deliberately imperfect emulator (80 training runs), and counts how often the reported 68% interval contains the truth. Honest error bars contain it about 68% of the time:
 
 ![Coverage of the 68% interval for three likelihoods](docs/images/coverage.png)
 
 | Likelihood | Truth inside the 68% interval |
 |---|---:|
-| Emulator treated as exact | 30% |
-| + ensemble spread | 44% |
-| + validation-measured error | 81% |
+| Emulator treated as exact | 20% |
+| + ensemble spread | 38% |
+| + validation-measured error | 74% |
 
-Treating the emulator as exact gives error bars far too small: the truth falls outside them most of the time. The ensemble spread helps, but not enough. The reason is that emulator errors are **systematic**: an emulator that is 1% too high at one scale is usually too high at the neighbouring scales too, so the error does not average away over 50 data points the way independent noise does. A 5-member ensemble can only describe a handful of such error patterns. The covariance measured on 300 validation runs captures them, and the result is honest, erring slightly on the cautious side (81% rather than 68%), because a single error estimate is applied everywhere, including regions where the emulator is better than average.
+Treating the emulator as exact gives error bars far too small: the truth falls outside them most of the time. The ensemble spread helps, but not enough. The reason is that emulator errors are **systematic**: an emulator that is 1% too high at one scale is usually too high at the neighbouring scales too, so the error does not average away over 50 data points the way independent noise does. A 5-member ensemble can only describe a handful of such error patterns. The covariance measured on 300 validation runs captures them, and the result is close to honest (74% against the ideal 68%), slightly on the cautious side because a single error estimate is applied everywhere, including regions where the emulator is better than average.
 
 With 30 observations of 3 parameters, each coverage figure is uncertain by about ±5 percentage points.
+
+The true parameters are drawn from the whole prior, here the range the emulator was trained on. That is what makes 68% the right target: a Bayesian credible interval is only guaranteed to contain the truth 68% of the time *on average over truths drawn from the prior*. Drawing them only from the middle of the ranges inflates coverage whenever posteriors are wide enough to feel the edges.
+
+For validation-measured error, the likelihood describes the measured error by its main correlated patterns (99.9% of the error variance by default, set with `error_variance_kept`) and treats the small remainder as independent per-output error. This is mathematically almost identical and much faster: on the CAMB example below, one evaluation takes about 0.3–0.5 ms instead of several milliseconds.
+
+## Demonstration on CAMB
+
+[`examples/camb/`](examples/camb) applies `emutrust` to a real cosmology problem: the linear matter power spectrum P(k) from the Boltzmann code [CAMB](https://camb.info/), at 200 scales between k = 10⁻⁴ and 1 h/Mpc, over five ΛCDM parameters (H0, ombh2, omch2, ns, As). The setup matches the earlier [cosmo-emulator](https://github.com/mqurban/cosmo-emulator) project, which treated its emulator as exact.
+
+- [`generate.py`](examples/camb/generate.py) runs CAMB for 300 training and 300 validation points (CAMB 2.0.5). The runs are included in the repository, so CAMB itself is only needed to simulate new observations.
+- [`demo.py`](examples/camb/demo.py) trains a 5-member emulator, validates it, times it against CAMB and runs a coverage test.
+
+**Accuracy and speed.**
+
+| | Result |
+|---|---:|
+| Mean error on 300 unseen spectra | 0.05% |
+| Median error | 0.03% |
+| Worst error (near the edges of the parameter ranges) | 1.5% |
+| Truth within 1 / 2 predicted std | 71% / 92% |
+| One CAMB call | 0.58 s |
+| One likelihood evaluation, including emulator error | 0.3–0.5 ms |
+| One MCMC run (192,000 evaluations) | about 1 minute, against about 31 hours with CAMB in the loop |
+
+The speed-up is roughly 1,500–2,000x; the exact figure varies with machine load.
+
+![Validation of the CAMB emulator](docs/images/camb_validation.png)
+
+**Are the error bars honest?** For 30 simulated observations at each of two noise levels, with true parameters drawn from the prior, MCMC (32 walkers, 6,000 steps, at least 47 autocorrelation times after burn-in) gives:
+
+![Coverage for CAMB at two noise levels](docs/images/camb_coverage.png)
+
+| Noise per data point | Emulator treated as exact | + validation-measured error |
+|---|---:|---:|
+| 2% | 75% | 75% |
+| 0.2% | **55%** | **71%** |
+
+(ideal: 68%; each figure is uncertain by about ±4 percentage points)
+
+- **At 2% noise, the emulator's error does not matter.** The emulator is accurate to about 0.05%, forty times smaller than the noise, and both likelihoods agree. Treating this emulator as exact was safe for data of this quality.
+- **At 0.2% noise, it does.** The emulator's systematic errors become comparable to the information in the data, and treating it as exact makes the error bars too small: the truth falls inside the 68% interval only 55% of the time. Including the validation-measured error restores honest error bars (71%).
+
+As surveys reach sub-percent precision, an emulator that was good enough yesterday stops being good enough, and its error has to be part of the inference.
 
 ### Toy model for testing
 
@@ -180,7 +223,7 @@ With 30 observations of 3 parameters, each coverage figure is uncertain by about
 - [x] Validation report: held-out accuracy, worst cases, uncertainty calibration
 - [x] Likelihood that includes emulator error (ensemble or validation-measured), ready for `emcee`
 - [x] Coverage test showing the effect on inference
-- [ ] Demonstration on CAMB: inference with and without emulator uncertainty, compared against the true parameters
+- [x] Demonstration on CAMB: accuracy, speed, and coverage with and without emulator error
 - [ ] Documentation and PyPI release
 
 ## Related work
