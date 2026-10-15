@@ -4,19 +4,6 @@ import pytest
 from emutrust import Emulator, ParameterSpace, TrainingSet, run_model
 from emutrust.toy import TOY_K, TOY_SPACE, toy_spectrum
 
-FAST = dict(n_members=3, hidden=(64, 64), epochs=400, patience=60)
-
-
-@pytest.fixture(scope="module")
-def toy_training():
-    space = ParameterSpace(TOY_SPACE)
-    return run_model(toy_spectrum, space.sample(300, seed=0), space, progress=False)
-
-
-@pytest.fixture(scope="module")
-def toy_emulator(toy_training):
-    return Emulator.fit(toy_training, seed=0, **FAST)
-
 
 def test_learns_the_toy_spectrum(toy_emulator):
     space = ParameterSpace(TOY_SPACE)

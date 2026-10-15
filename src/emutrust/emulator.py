@@ -84,6 +84,7 @@ class Emulator:
         log_outputs: bool,
         names: tuple[str, ...],
         config: dict,
+        std_scale: float = 1.0,
     ):
         self.members = members
         self.x_scaler = x_scaler
@@ -91,8 +92,20 @@ class Emulator:
         self.log_outputs = log_outputs
         self.names = tuple(names)
         self.config = config
+        #: Multiplies every predicted std. 1.0 means the raw ensemble spread;
+        #: set it from a validation report if the spread is too small or large.
+        self.std_scale = float(std_scale)
         for net in self.members:
             net.eval()
+
+    @property
+    def bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """Lowest and highest value of each parameter in the training set.
+
+        The emulator has only seen the model inside this box; predictions
+        outside it are extrapolations and should not be trusted.
+        """
+        return np.asarray(self.config["train_low"]), np.asarray(self.config["train_high"])
 
     @property
     def n_members(self) -> int:
@@ -170,6 +183,8 @@ class Emulator:
             "n_inputs": X.shape[1],
             "n_outputs": Y.shape[1],
             "n_train": len(X),
+            "train_low": X.min(axis=0).tolist(),
+            "train_high": X.max(axis=0).tolist(),
         }
         return cls(members, x_scaler, y_scaler, bool(log_outputs), training.names, config)
 
@@ -197,13 +212,15 @@ class Emulator:
         """Predict outputs at one point (a dict or a 1-D array) or many points.
 
         Returns ``(mean, std)``: the ensemble average and the spread between
-        members, both in the model's original output units. A single input
-        point gives 1-D arrays; many points give 2-D arrays.
+        members (times :attr:`std_scale`), both in the model's original output
+        units. A single input point gives 1-D arrays; many points give 2-D
+        arrays.
         """
         single = isinstance(x, Mapping) or np.ndim(x) == 1
         preds = self.predict_members(x)
         mean = preds.mean(axis=0)
         std = preds.std(axis=0, ddof=1) if self.n_members > 1 else np.zeros_like(mean)
+        std = std * self.std_scale
         if single:
             mean, std = mean[0], std[0]
         return (mean, std) if return_std else mean
@@ -222,6 +239,7 @@ class Emulator:
                 "log_outputs": self.log_outputs,
                 "names": self.names,
                 "config": self.config,
+                "std_scale": self.std_scale,
             },
             path,
         )
@@ -243,6 +261,7 @@ class Emulator:
             state["log_outputs"],
             tuple(state["names"]),
             cfg,
+            state.get("std_scale", 1.0),
         )
 
 
