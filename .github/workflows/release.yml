@@ -1,11 +1,12 @@
 name: release
 
-# Publishes to PyPI when a version tag such as v0.1.0 is pushed. Uses PyPI
-# Trusted Publishing, so no API token is stored in the repository.
+# Publishes to PyPI when a GitHub Release is published with a tag such as
+# v0.1.0 (Releases -> Draft a new release). Uses PyPI Trusted Publishing, so
+# no API token is stored in the repository.
 
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
 
 jobs:
   build:
