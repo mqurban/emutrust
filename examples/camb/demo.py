@@ -79,7 +79,10 @@ taus = []
 for noise in NOISE_LEVELS:
     hits = {name: [] for name in modes}
     for _ in range(N_REALIZATIONS):
-        theta = SPACE.from_unit(0.15 + 0.7 * rng.random(SPACE.dim))
+        # Draw the truth from the whole prior (the parameter ranges): a 68%
+        # credible interval is only guaranteed to contain the truth 68% of
+        # the time on average over truths drawn from the prior.
+        theta = SPACE.from_unit(rng.random(SPACE.dim))
         truth = camb_power_spectrum(SPACE.to_dict(theta))
         data = truth * (1 + noise * rng.standard_normal(truth.size))
         # Start the walkers spread around the truth (5% of each range) rather
@@ -87,7 +90,10 @@ for noise in NOISE_LEVELS:
         start = theta + 0.05 * (SPACE.high - SPACE.low) * rng.standard_normal(
             (N_WALKERS, SPACE.dim)
         )
-        start = np.clip(start, SPACE.low + 1e-9 * (SPACE.high - SPACE.low), SPACE.high)
+        # Reflect starting points that fall outside the ranges back inside (clipping
+        # would stack walkers on the boundary, where emcee cannot separate them).
+        start = SPACE.low + np.abs(start - SPACE.low)
+        start = SPACE.high - np.abs(SPACE.high - start)
         for name, error in modes.items():
             like = GaussianLikelihood(emu, data, noise * truth, emulator_error=error)
             sampler = emcee.EnsembleSampler(N_WALKERS, SPACE.dim, like, vectorize=True)

@@ -45,17 +45,23 @@ rng = np.random.default_rng(1)
 np.random.seed(0)  # emcee draws from NumPy's global generator; seed it for reproducibility
 
 for r in range(N_REALIZATIONS):
-    # True parameters away from the edges, so intervals are not cut off by bounds.
-    theta = space.from_unit(0.15 + 0.7 * rng.random(space.dim))
+    # Draw the truth from the whole prior (the parameter ranges): a 68% credible
+    # interval is only guaranteed to contain the truth 68% of the time on
+    # average over truths drawn from the prior.
+    theta = space.from_unit(rng.random(space.dim))
     truth = toy_spectrum(space.to_dict(theta))
     data = truth * (1 + NOISE * rng.standard_normal(truth.size))
-    start = theta + 1e-3 * (space.high - space.low) * rng.standard_normal((32, space.dim))
+    start = theta + 0.05 * (space.high - space.low) * rng.standard_normal((32, space.dim))
+    # Reflect starting points that fall outside the ranges back inside (clipping
+    # would stack walkers on the boundary, where emcee cannot separate them).
+    start = space.low + np.abs(start - space.low)
+    start = space.high - np.abs(space.high - start)
 
     for name, error in likelihoods.items():
         like = GaussianLikelihood(emu, data, NOISE * truth, emulator_error=error)
         sampler = emcee.EnsembleSampler(32, space.dim, like, vectorize=True)
-        sampler.run_mcmc(start, 1500, progress=False)
-        chain = sampler.get_chain(discard=500, flat=True)
+        sampler.run_mcmc(start, 4000, progress=False)
+        chain = sampler.get_chain(discard=1500, flat=True)
         lo, hi = np.percentile(chain, [15.87, 84.13], axis=0)
         hits[name].append((theta >= lo) & (theta <= hi))
     print(f"realization {r + 1}/{N_REALIZATIONS} done")
