@@ -41,21 +41,23 @@ likelihoods = {
     "+ validation-measured error": report,
 }
 hits = {name: [] for name in likelihoods}
+low, high = emu.bounds  # the region the emulator was trained on
 rng = np.random.default_rng(1)
 np.random.seed(0)  # emcee draws from NumPy's global generator; seed it for reproducibility
 
 for r in range(N_REALIZATIONS):
-    # Draw the truth from the whole prior (the parameter ranges): a 68% credible
-    # interval is only guaranteed to contain the truth 68% of the time on
-    # average over truths drawn from the prior.
-    theta = space.from_unit(rng.random(space.dim))
+    # Draw the truth from the whole prior: the likelihood's flat prior covers
+    # the range the emulator was trained on. A 68% credible interval is only
+    # guaranteed to contain the truth 68% of the time on average over truths
+    # drawn from the prior.
+    theta = low + rng.random(space.dim) * (high - low)
     truth = toy_spectrum(space.to_dict(theta))
     data = truth * (1 + NOISE * rng.standard_normal(truth.size))
     start = theta + 0.05 * (space.high - space.low) * rng.standard_normal((32, space.dim))
     # Reflect starting points that fall outside the ranges back inside (clipping
     # would stack walkers on the boundary, where emcee cannot separate them).
-    start = space.low + np.abs(start - space.low)
-    start = space.high - np.abs(space.high - start)
+    start = low + np.abs(start - low)
+    start = high - np.abs(high - start)
 
     for name, error in likelihoods.items():
         like = GaussianLikelihood(emu, data, NOISE * truth, emulator_error=error)

@@ -72,6 +72,7 @@ print(
 
 # ------------------------------------------------------------- 4. coverage
 modes = {"emulator treated as exact": None, "+ validation-measured error": report}
+low, high = emu.bounds  # the region the emulator was trained on
 rng = np.random.default_rng(1)
 np.random.seed(0)  # emcee draws from NumPy's global generator
 coverage = {}
@@ -79,10 +80,11 @@ taus = []
 for noise in NOISE_LEVELS:
     hits = {name: [] for name in modes}
     for _ in range(N_REALIZATIONS):
-        # Draw the truth from the whole prior (the parameter ranges): a 68%
-        # credible interval is only guaranteed to contain the truth 68% of
-        # the time on average over truths drawn from the prior.
-        theta = SPACE.from_unit(rng.random(SPACE.dim))
+        # Draw the truth from the whole prior: the likelihood's flat prior covers
+        # the range the emulator was trained on. A 68% credible interval is only
+        # guaranteed to contain the truth 68% of the time on average over truths
+        # drawn from the prior.
+        theta = low + rng.random(SPACE.dim) * (high - low)
         truth = camb_power_spectrum(SPACE.to_dict(theta))
         data = truth * (1 + noise * rng.standard_normal(truth.size))
         # Start the walkers spread around the truth (5% of each range) rather
@@ -92,8 +94,8 @@ for noise in NOISE_LEVELS:
         )
         # Reflect starting points that fall outside the ranges back inside (clipping
         # would stack walkers on the boundary, where emcee cannot separate them).
-        start = SPACE.low + np.abs(start - SPACE.low)
-        start = SPACE.high - np.abs(SPACE.high - start)
+        start = low + np.abs(start - low)
+        start = high - np.abs(high - start)
         for name, error in modes.items():
             like = GaussianLikelihood(emu, data, noise * truth, emulator_error=error)
             sampler = emcee.EnsembleSampler(N_WALKERS, SPACE.dim, like, vectorize=True)
