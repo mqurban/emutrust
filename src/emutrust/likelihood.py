@@ -42,7 +42,7 @@ class GaussianLikelihood:
 
     For validation-measured error, ``error_variance_kept`` sets how much of
     the measured error variance is described by its main correlated
-    patterns (default 99%); the rest is kept as independent per-output
+    patterns (default 99.9%); the rest is kept as independent per-output
     error. This makes each evaluation much faster with a negligible change
     in the result. Use ``1.0`` to keep every pattern.
 
@@ -62,7 +62,7 @@ class GaussianLikelihood:
         data: np.ndarray,
         noise_std: float | np.ndarray,
         emulator_error: EmulatorError = "ensemble",
-        error_variance_kept: float = 0.99,
+        error_variance_kept: float = 0.999,
     ):
         self.emulator = emulator
         self.data = np.asarray(data, dtype=float).ravel()
@@ -168,12 +168,12 @@ class GaussianLikelihood:
             # Woodbury identity and matrix determinant lemma: only a K x K
             # matrix per point needs factorising.
             a = scale[:, :, None] * self._modes  # (P, n, K)
-            a_d = a / d[:, :, None]
-            small = np.einsum("pnk,pnj->pkj", a_d, a)
+            a_d_t = np.swapaxes(a / d[:, :, None], 1, 2)  # (P, K, n)
+            small = a_d_t @ a  # (P, K, K), batched matrix product (BLAS)
             k = small.shape[1]
             small[:, np.arange(k), np.arange(k)] += 1.0 / self._mode_var
             chol = np.linalg.cholesky(small)
-            u = np.linalg.solve(chol, np.einsum("pnk,pn->pk", a_d, resid)[..., None])[..., 0]
+            u = np.linalg.solve(chol, a_d_t @ resid[..., None])[..., 0]
             quad -= np.sum(u**2, axis=1)
             logdet += 2 * np.sum(np.log(np.diagonal(chol, axis1=1, axis2=2)), axis=1)
             logdet += np.sum(np.log(self._mode_var))

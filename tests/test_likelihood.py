@@ -50,9 +50,15 @@ def test_main_error_patterns_give_nearly_the_same_likelihood(
     full = GaussianLikelihood(toy_emulator, y, sig, emulator_error=report, error_variance_kept=1.0)
     fast = GaussianLikelihood(toy_emulator, y, sig, emulator_error=report)
     assert fast.n_error_modes < full.n_error_modes
-    points = np.array([THETA, THETA + [0.02, 0.01, 0.05], THETA - [0.05, 0.02, 0.1]])
-    # Differences in log-likelihood far below 1 do not change any inference.
-    np.testing.assert_allclose(fast(points), full(points), atol=0.05)
+    # Inference depends only on log-likelihood differences between points, so
+    # compare those near the peak; changes well below 1 do not affect results.
+    rng = np.random.default_rng(1)
+    points = THETA + rng.normal(size=(200, 3)) * [0.01, 0.005, 0.03]
+    lf, lfast = full(points), fast(points)
+    best = np.argmax(lf)
+    near = lf - lf[best] > -10
+    shift = (lfast - lfast[best]) - (lf - lf[best])
+    assert np.max(np.abs(shift[near])) < 0.2
 
 
 def test_emulator_error_makes_a_poor_fit_less_unlikely(toy_emulator, data):

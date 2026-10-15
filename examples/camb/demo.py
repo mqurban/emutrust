@@ -9,9 +9,13 @@ Uses the runs made by ``generate.py`` (run that first). The script:
    cosmological parameters, how often does the 68% interval from MCMC
    contain the truth, with and without the emulator's error included?
 
-Run from the repository root (needs camb, emcee and matplotlib):
+Run from the repository root (needs camb, emcee and matplotlib; about 45
+minutes on a 4-core laptop CPU):
 
-    python examples/camb/demo.py
+    OPENBLAS_NUM_THREADS=1 python examples/camb/demo.py
+
+Limiting NumPy's linear-algebra library to one thread stops it competing
+with PyTorch for CPU cores, which speeds up the likelihood noticeably.
 """
 
 import sys
