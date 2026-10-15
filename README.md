@@ -77,7 +77,7 @@ from emutrust import Emulator
 emu = Emulator.fit(training, n_members=5, seed=0)
 
 mean, std = emu.predict({"H0": 67.3, "omch2": 0.12, "ns": 0.965})
-emu.save("emulator.pt")            # reload later with Emulator.load
+emu.save("emulator.pt")  # reload later with Emulator.load
 ```
 
 `Emulator.fit` trains a **deep ensemble**: several neural networks on the same training set, each starting from different random weights and holding out a different random part of the data for early stopping. `predict` returns the ensemble average and the spread between members, both in the model's original units.
