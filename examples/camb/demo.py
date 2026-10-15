@@ -10,7 +10,7 @@ Uses the runs made by ``generate.py`` (run that first). The script:
    contain the truth, with and without the emulator's error included?
 
 Run from the repository root (needs camb, emcee and matplotlib; about 45
-minutes on a 4-core laptop CPU):
+minutes to an hour on a 4-core laptop CPU):
 
     OPENBLAS_NUM_THREADS=1 python examples/camb/demo.py
 
@@ -35,7 +35,7 @@ from generate import SPACE, camb_power_spectrum  # noqa: E402
 IMAGES = HERE.parents[1] / "docs" / "images"
 NOISE_LEVELS = [0.02, 0.002]  # fractional noise per data point
 N_REALIZATIONS = 30
-N_WALKERS, N_STEPS, BURN_IN = 32, 2500, 1000
+N_WALKERS, N_STEPS, BURN_IN = 32, 6000, 2000  # > 100 autocorrelation times
 
 # ---------------------------------------------------------------- 1. train
 training = load_runs(HERE / "data" / "training.npz")
@@ -75,19 +75,25 @@ modes = {"emulator treated as exact": None, "+ validation-measured error": repor
 rng = np.random.default_rng(1)
 np.random.seed(0)  # emcee draws from NumPy's global generator
 coverage = {}
+taus = []
 for noise in NOISE_LEVELS:
     hits = {name: [] for name in modes}
     for _ in range(N_REALIZATIONS):
         theta = SPACE.from_unit(0.15 + 0.7 * rng.random(SPACE.dim))
         truth = camb_power_spectrum(SPACE.to_dict(theta))
         data = truth * (1 + noise * rng.standard_normal(truth.size))
-        start = theta + 1e-3 * (SPACE.high - SPACE.low) * rng.standard_normal(
+        # Start the walkers spread around the truth (5% of each range) rather
+        # than on it, so the chains must find the posterior themselves.
+        start = theta + 0.05 * (SPACE.high - SPACE.low) * rng.standard_normal(
             (N_WALKERS, SPACE.dim)
         )
+        start = np.clip(start, SPACE.low + 1e-9 * (SPACE.high - SPACE.low), SPACE.high)
         for name, error in modes.items():
             like = GaussianLikelihood(emu, data, noise * truth, emulator_error=error)
             sampler = emcee.EnsembleSampler(N_WALKERS, SPACE.dim, like, vectorize=True)
             sampler.run_mcmc(start, N_STEPS, progress=False)
+            tau = sampler.get_autocorr_time(discard=BURN_IN, quiet=True).max()
+            taus.append(tau)
             chain = sampler.get_chain(discard=BURN_IN, flat=True)
             lo, hi = np.percentile(chain, [15.87, 84.13], axis=0)
             hits[name].append((theta >= lo) & (theta <= hi))
@@ -98,6 +104,11 @@ for noise in NOISE_LEVELS:
         per_param = ", ".join(f"{n} {100 * c:.0f}%" for n, c in zip(SPACE.names, h.mean(axis=0)))
         print(f"  {name:<28} {100 * h.mean():3.0f}%   ({per_param})")
     print()
+
+print(
+    f"Chain length {N_STEPS - BURN_IN} steps after burn-in; longest autocorrelation time "
+    f"{max(taus):.0f} steps ({(N_STEPS - BURN_IN) / max(taus):.0f}x)\n"
+)
 
 fig, ax = plt.subplots(figsize=(7.5, 3.8))
 colors = {"emulator treated as exact": "#c0392b", "+ validation-measured error": "#1f4e79"}
