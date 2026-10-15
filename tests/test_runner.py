@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from emutrust import ParameterSpace, run_model
+from emutrust import ParameterSpace, load_runs, run_model
 from emutrust.toy import TOY_K, TOY_SPACE, toy_spectrum
 
 
@@ -86,3 +86,32 @@ def test_rejects_points_outside_the_space(space):
 def test_scalar_outputs_are_allowed():
     ts = run_model(lambda p: p["a"] ** 2, [[0.5], [0.2]], {"a": (0, 1)}, progress=False)
     np.testing.assert_allclose(ts.Y[:, 0], [0.25, 0.04])
+
+
+def test_load_runs_reads_a_checkpoint(space, tmp_path):
+    X = space.sample(8, seed=2)
+    ckpt = tmp_path / "runs.npz"
+    ts = run_model(toy_spectrum, X, space, checkpoint=ckpt, progress=False)
+    loaded = load_runs(ckpt)
+    np.testing.assert_array_equal(loaded.X, ts.X)
+    np.testing.assert_array_equal(loaded.Y, ts.Y)
+    assert loaded.names == space.names
+    assert loaded.seconds_per_run >= 0
+
+
+def test_load_runs_returns_only_finished_runs(space, tmp_path):
+    X = space.sample(6, seed=3)
+    ckpt = tmp_path / "runs.npz"
+    calls = []
+
+    def crash_after_two(params):
+        calls.append(1)
+        if len(calls) == 3:
+            raise RuntimeError("stop")
+        return toy_spectrum(params)
+
+    with pytest.raises(RuntimeError):
+        run_model(crash_after_two, X, space, checkpoint=ckpt, progress=False)
+    loaded = load_runs(ckpt)
+    assert len(loaded) == 2
+    np.testing.assert_array_equal(loaded.X, X[:2])

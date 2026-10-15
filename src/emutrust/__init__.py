@@ -3,7 +3,7 @@ calibrated uncertainty you can trust in Bayesian inference."""
 
 from .emulator import Emulator
 from .likelihood import GaussianLikelihood
-from .runner import TrainingSet, run_model
+from .runner import TrainingSet, load_runs, run_model
 from .space import ParameterSpace, latin_hypercube
 from .validation import ValidationReport, validate
 
@@ -16,6 +16,7 @@ __all__ = [
     "TrainingSet",
     "ValidationReport",
     "latin_hypercube",
+    "load_runs",
     "run_model",
     "validate",
     "__version__",

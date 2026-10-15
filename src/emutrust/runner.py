@@ -130,4 +130,22 @@ def _load_checkpoint(path: Path, points, space):
     return [row for row in saved_outputs], elapsed
 
 
-__all__ = ["TrainingSet", "run_model"]
+def load_runs(path: PathLike) -> TrainingSet:
+    """Load completed runs from a ``run_model`` checkpoint file.
+
+    Useful for analysing saved runs without importing or re-running the
+    slow model. Only finished runs are returned, so a partly complete
+    checkpoint gives a shorter training set.
+    """
+    with np.load(path) as data:
+        outputs = data["outputs"]
+        n = len(outputs)
+        return TrainingSet(
+            X=data["points"][:n].copy(),
+            Y=outputs.copy(),
+            names=tuple(str(name) for name in data["names"]),
+            seconds_per_run=float(data["elapsed"]) / max(n, 1),
+        )
+
+
+__all__ = ["TrainingSet", "load_runs", "run_model"]
