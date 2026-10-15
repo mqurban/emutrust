@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use emutrust in your work, please cite it as below."
+title: "emutrust: neural network emulators with calibrated uncertainty for Bayesian inference"
+type: software
+authors:
+  - family-names: Qurban
+    given-names: Muhammad
+version: 0.1.0
+date-released: 2026-10-15
+license: MIT
+repository-code: "https://github.com/mqurban/emutrust"
+keywords:
+  - emulator
+  - uncertainty quantification
+  - Bayesian inference
+  - cosmology

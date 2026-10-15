@@ -2,7 +2,14 @@
 
 **Neural network emulators for slow scientific models, with calibrated uncertainty you can trust in Bayesian inference.**
 
-> **Status:** early development (`0.1.0.dev0`). Training-set generation, the ensemble emulator, the validation report and the likelihood are working, tested, and demonstrated on CAMB; documentation and packaging are next. See the [roadmap](#roadmap).
+[![tests](https://github.com/mqurban/emutrust/actions/workflows/tests.yml/badge.svg)](https://github.com/mqurban/emutrust/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/emutrust)](https://pypi.org/project/emutrust/)
+[![Python](https://img.shields.io/pypi/pyversions/emutrust)](https://pypi.org/project/emutrust/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/mqurban/emutrust/blob/main/LICENSE)
+
+> **Status:** alpha (`0.1.0`). All components are working, tested on Python 3.9 to 3.13, and demonstrated on CAMB. The API may still change before 1.0.
+
+**Documentation:** [user guide](https://github.com/mqurban/emutrust/blob/main/docs/guide.md) · [API reference](https://github.com/mqurban/emutrust/blob/main/docs/api.md) · [quickstart example](https://github.com/mqurban/emutrust/blob/main/examples/quickstart.py) · [changelog](https://github.com/mqurban/emutrust/blob/main/CHANGELOG.md)
 
 ## The problem
 
@@ -22,14 +29,15 @@ It works with **any** Python function: a cosmology code, a simulation wrapper, o
 ## Installation
 
 ```bash
-git clone https://github.com/mqurban/emutrust
-cd emutrust
-pip install -e ".[dev]"
+pip install emutrust            # core: NumPy and PyTorch
+pip install "emutrust[mcmc,plot]"  # also emcee and matplotlib, used in the examples
 ```
 
 `emutrust` needs NumPy and PyTorch. On a machine without a GPU, installing the CPU-only build of PyTorch first (`pip install torch --index-url https://download.pytorch.org/whl/cpu`) avoids a large download.
 
-## What works today
+## Usage
+
+A complete, runnable version of the steps below is in [`examples/quickstart.py`](https://github.com/mqurban/emutrust/blob/main/examples/quickstart.py) (about 15 seconds on a laptop).
 
 ### 1. Define the parameter space and sample training points
 
@@ -87,7 +95,7 @@ emu.save("emulator.pt")  # reload later with Emulator.load
 
 Inputs and outputs are standardised before training. Outputs that are all positive and span more than two orders of magnitude, such as power spectra, are learned in `log10` space automatically.
 
-On the toy spectrum below, an ensemble of 5 networks trained on 300 runs gives, on 200 unseen test points ([`examples/toy_benchmark.py`](examples/toy_benchmark.py)):
+On the toy spectrum below, an ensemble of 5 networks trained on 300 runs gives, on 200 unseen test points ([`examples/toy_benchmark.py`](https://github.com/mqurban/emutrust/blob/main/examples/toy_benchmark.py)):
 
 | Metric | Result | Ideal |
 |---|---:|---:|
@@ -99,9 +107,9 @@ On the toy spectrum below, an ensemble of 5 networks trained on 300 runs gives, 
 
 The last two rows test whether the uncertainty is *honest*: if it is well calibrated, the true value should fall within one predicted standard deviation 68% of the time, and within two 95% of the time. The worst cases are near the edges of the parameter space, where training points are sparsest.
 
-**A known limitation.** Outside the parameter ranges used for training, the members spread apart, which correctly signals unfamiliar ground, but they can all extrapolate in the same wrong direction, so the spread no longer measures the true error ([`examples/ensemble_uncertainty.py`](examples/ensemble_uncertainty.py)):
+**A known limitation.** Outside the parameter ranges used for training, the members spread apart, which correctly signals unfamiliar ground, but they can all extrapolate in the same wrong direction, so the spread no longer measures the true error ([`examples/ensemble_uncertainty.py`](https://github.com/mqurban/emutrust/blob/main/examples/ensemble_uncertainty.py)):
 
-![Ensemble members agree inside the training range and spread apart outside it](docs/images/ensemble_uncertainty.png)
+![Ensemble members agree inside the training range and spread apart outside it](https://raw.githubusercontent.com/mqurban/emutrust/main/docs/images/ensemble_uncertainty.png)
 
 An emulator should therefore only be used inside the ranges it was trained on; the likelihood below enforces this.
 
@@ -116,7 +124,7 @@ print(report)
 report.plot("validation.png")
 ```
 
-The report covers accuracy (mean, median and worst error), the worst parameter points, how the error varies across each parameter's range, and whether the uncertainty is honest. For an emulator trained on only 80 runs of the toy spectrum ([`examples/coverage_test.py`](examples/coverage_test.py)), part of it reads:
+The report covers accuracy (mean, median and worst error), the worst parameter points, how the error varies across each parameter's range, and whether the uncertainty is honest. For an emulator trained on only 80 runs of the toy spectrum ([`examples/coverage_test.py`](https://github.com/mqurban/emutrust/blob/main/examples/coverage_test.py)), part of it reads:
 
 ```
 Uncertainty calibration
@@ -153,9 +161,9 @@ The likelihood compares the data with the emulator's prediction using a covarian
 
 Parameters outside the range the emulator was trained on are rejected, so the sampler never relies on extrapolation.
 
-**Does it work? A coverage test.** [`examples/coverage_test.py`](examples/coverage_test.py) simulates 30 observations with true parameters drawn from the prior (50 data points each, 1% noise), infers the parameters through a deliberately imperfect emulator (80 training runs), and counts how often the reported 68% interval contains the truth. Honest error bars contain it about 68% of the time:
+**Does it work? A coverage test.** [`examples/coverage_test.py`](https://github.com/mqurban/emutrust/blob/main/examples/coverage_test.py) simulates 30 observations with true parameters drawn from the prior (50 data points each, 1% noise), infers the parameters through a deliberately imperfect emulator (80 training runs), and counts how often the reported 68% interval contains the truth. Honest error bars contain it about 68% of the time:
 
-![Coverage of the 68% interval for three likelihoods](docs/images/coverage.png)
+![Coverage of the 68% interval for three likelihoods](https://raw.githubusercontent.com/mqurban/emutrust/main/docs/images/coverage.png)
 
 | Likelihood | Truth inside the 68% interval |
 |---|---:|
@@ -173,10 +181,10 @@ For validation-measured error, the likelihood describes the measured error by it
 
 ## Demonstration on CAMB
 
-[`examples/camb/`](examples/camb) applies `emutrust` to a real cosmology problem: the linear matter power spectrum P(k) from the Boltzmann code [CAMB](https://camb.info/), at 200 scales between k = 10⁻⁴ and 1 h/Mpc, over five ΛCDM parameters (H0, ombh2, omch2, ns, As). The setup matches the earlier [cosmo-emulator](https://github.com/mqurban/cosmo-emulator) project, which treated its emulator as exact.
+[`examples/camb/`](https://github.com/mqurban/emutrust/tree/main/examples/camb) applies `emutrust` to a real cosmology problem: the linear matter power spectrum P(k) from the Boltzmann code [CAMB](https://camb.info/), at 200 scales between k = 10⁻⁴ and 1 h/Mpc, over five ΛCDM parameters (H0, ombh2, omch2, ns, As). The setup matches the earlier [cosmo-emulator](https://github.com/mqurban/cosmo-emulator) project, which treated its emulator as exact.
 
-- [`generate.py`](examples/camb/generate.py) runs CAMB for 300 training and 300 validation points (CAMB 2.0.5). The runs are included in the repository, so CAMB itself is only needed to simulate new observations.
-- [`demo.py`](examples/camb/demo.py) trains a 5-member emulator, validates it, times it against CAMB and runs a coverage test.
+- [`generate.py`](https://github.com/mqurban/emutrust/blob/main/examples/camb/generate.py) runs CAMB for 300 training and 300 validation points (CAMB 2.0.5). The runs are included in the repository, so CAMB itself is only needed to simulate new observations.
+- [`demo.py`](https://github.com/mqurban/emutrust/blob/main/examples/camb/demo.py) trains a 5-member emulator, validates it, times it against CAMB and runs a coverage test.
 
 **Accuracy and speed.**
 
@@ -192,11 +200,11 @@ For validation-measured error, the likelihood describes the measured error by it
 
 The speed-up is roughly 1,500–2,000x; the exact figure varies with machine load.
 
-![Validation of the CAMB emulator](docs/images/camb_validation.png)
+![Validation of the CAMB emulator](https://raw.githubusercontent.com/mqurban/emutrust/main/docs/images/camb_validation.png)
 
 **Are the error bars honest?** For 30 simulated observations at each of two noise levels, with true parameters drawn from the prior, MCMC (32 walkers, 6,000 steps, at least 47 autocorrelation times after burn-in) gives:
 
-![Coverage for CAMB at two noise levels](docs/images/camb_coverage.png)
+![Coverage for CAMB at two noise levels](https://raw.githubusercontent.com/mqurban/emutrust/main/docs/images/camb_coverage.png)
 
 | Noise per data point | Emulator treated as exact | + validation-measured error |
 |---|---:|---:|
@@ -224,7 +232,9 @@ As surveys reach sub-percent precision, an emulator that was good enough yesterd
 - [x] Likelihood that includes emulator error (ensemble or validation-measured), ready for `emcee`
 - [x] Coverage test showing the effect on inference
 - [x] Demonstration on CAMB: accuracy, speed, and coverage with and without emulator error
-- [ ] Documentation and PyPI release
+- [x] User guide, API reference and PyPI release
+- [ ] Adaptive sampling: add training runs where the validation report shows the largest errors
+- [ ] Error estimates that vary across the parameter space, instead of one average
 
 ## Related work
 
@@ -236,10 +246,17 @@ As surveys reach sub-percent precision, an emulator that was good enough yesterd
 ## Development
 
 ```bash
+git clone https://github.com/mqurban/emutrust
+cd emutrust
+pip install -e ".[dev]"
 pytest          # run the tests
 ruff check .    # lint
 ```
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/mqurban/emutrust/blob/main/LICENSE).
+
+## Citing
+
+If `emutrust` is useful in your work, please cite it using the metadata in [`CITATION.cff`](https://github.com/mqurban/emutrust/blob/main/CITATION.cff).

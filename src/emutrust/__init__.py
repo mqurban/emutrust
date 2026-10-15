@@ -7,7 +7,7 @@ from .runner import TrainingSet, load_runs, run_model
 from .space import ParameterSpace, latin_hypercube
 from .validation import ValidationReport, validate
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 __all__ = [
     "Emulator",

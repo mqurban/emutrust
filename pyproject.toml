@@ -4,20 +4,36 @@ build-backend = "hatchling.build"
 
 [project]
 name = "emutrust"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 description = "Neural network emulators for slow scientific models, with calibrated uncertainty you can trust in Bayesian inference."
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Muhammad Qurban", email = "mianqurban525@gmail.com" }]
 requires-python = ">=3.9"
 dependencies = ["numpy>=1.22", "torch>=2.0"]
+keywords = [
+    "emulator",
+    "surrogate model",
+    "uncertainty quantification",
+    "bayesian inference",
+    "mcmc",
+    "cosmology",
+    "neural networks",
+]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Astronomy",
     "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +43,18 @@ mcmc = ["emcee>=3.1"]
 
 [project.urls]
 Repository = "https://github.com/mqurban/emutrust"
+Documentation = "https://github.com/mqurban/emutrust/blob/main/docs/guide.md"
+Issues = "https://github.com/mqurban/emutrust/issues"
+Changelog = "https://github.com/mqurban/emutrust/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/emutrust/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "README.md", "LICENSE", "CHANGELOG.md", "CITATION.cff"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/emutrust"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
