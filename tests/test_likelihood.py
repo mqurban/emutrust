@@ -35,11 +35,24 @@ def test_ensemble_mode_adds_the_emulator_variance(toy_emulator, data):
 def test_validation_mode_uses_the_measured_covariance(toy_emulator, toy_validation_runs, data):
     y, sig = data
     report = validate(toy_emulator, toy_validation_runs)
-    like = GaussianLikelihood(toy_emulator, y, sig, emulator_error=report)
+    like = GaussianLikelihood(toy_emulator, y, sig, emulator_error=report, error_variance_kept=1.0)
     mean, _ = toy_emulator.predict(THETA)
     _, M = report.error_covariance()
     cov = np.outer(mean, mean) * M + np.diag(sig**2)
     assert like(THETA) == pytest.approx(manual_gaussian(y - mean, cov))
+
+
+def test_main_error_patterns_give_nearly_the_same_likelihood(
+    toy_emulator, toy_validation_runs, data
+):
+    y, sig = data
+    report = validate(toy_emulator, toy_validation_runs)
+    full = GaussianLikelihood(toy_emulator, y, sig, emulator_error=report, error_variance_kept=1.0)
+    fast = GaussianLikelihood(toy_emulator, y, sig, emulator_error=report)
+    assert fast.n_error_modes < full.n_error_modes
+    points = np.array([THETA, THETA + [0.02, 0.01, 0.05], THETA - [0.05, 0.02, 0.1]])
+    # Differences in log-likelihood far below 1 do not change any inference.
+    np.testing.assert_allclose(fast(points), full(points), atol=0.05)
 
 
 def test_emulator_error_makes_a_poor_fit_less_unlikely(toy_emulator, data):
@@ -75,3 +88,9 @@ def test_rejects_bad_inputs(toy_emulator, data):
         GaussianLikelihood(toy_emulator, y, 0.0)
     with pytest.raises(ValueError, match="emulator_error"):
         GaussianLikelihood(toy_emulator, y, sig, emulator_error="full")
+
+
+def test_rejects_bad_variance_fraction(toy_emulator, toy_validation_runs, data):
+    report = validate(toy_emulator, toy_validation_runs)
+    with pytest.raises(ValueError, match="error_variance_kept"):
+        GaussianLikelihood(toy_emulator, *data, emulator_error=report, error_variance_kept=0)
