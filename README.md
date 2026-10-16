@@ -6,6 +6,7 @@
 [![PyPI](https://img.shields.io/pypi/v/emutrust)](https://pypi.org/project/emutrust/)
 [![Python](https://img.shields.io/pypi/pyversions/emutrust)](https://pypi.org/project/emutrust/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/mqurban/emutrust/blob/main/LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23417321.svg)](https://doi.org/10.5281/zenodo.23417321)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mqurban/emutrust/blob/main/examples/emutrust_colab.ipynb)
 
 > **Status:** alpha (`0.1.1`). All components are working, tested on Python 3.9 to 3.13, and demonstrated on CAMB. The API may still change before 1.0.
@@ -262,4 +263,16 @@ MIT. See [LICENSE](https://github.com/mqurban/emutrust/blob/main/LICENSE).
 
 ## Citing
 
-If `emutrust` is useful in your work, please cite it using the metadata in [`CITATION.cff`](https://github.com/mqurban/emutrust/blob/main/CITATION.cff).
+If `emutrust` is useful in your work, please cite it. Every release is archived on Zenodo; the DOI [10.5281/zenodo.23417321](https://doi.org/10.5281/zenodo.23417321) always points to the latest version, and each version also has its own DOI on that page.
+
+```bibtex
+@software{qurban_emutrust,
+  author    = {Qurban, Muhammad},
+  title     = {emutrust: neural network emulators with calibrated uncertainty for Bayesian inference},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23417321},
+  url       = {https://doi.org/10.5281/zenodo.23417321}
+}
+```
+
+The same metadata is in [`CITATION.cff`](https://github.com/mqurban/emutrust/blob/main/CITATION.cff), which GitHub shows as "Cite this repository".
