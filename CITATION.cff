@@ -5,8 +5,9 @@ type: software
 authors:
   - family-names: Qurban
     given-names: Muhammad
-version: 0.1.0
-date-released: 2026-10-15
+    orcid: "https://orcid.org/0000-0001-6391-8845"
+version: 0.1.1
+date-released: 2026-10-16
 license: MIT
 repository-code: "https://github.com/mqurban/emutrust"
 keywords:

@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/mqurban/emutrust/blob/main/LICENSE)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mqurban/emutrust/blob/main/examples/emutrust_colab.ipynb)
 
-> **Status:** alpha (`0.1.0`). All components are working, tested on Python 3.9 to 3.13, and demonstrated on CAMB. The API may still change before 1.0.
+> **Status:** alpha (`0.1.1`). All components are working, tested on Python 3.9 to 3.13, and demonstrated on CAMB. The API may still change before 1.0.
 
 **Try it in your browser:** the [Colab notebook](https://colab.research.google.com/github/mqurban/emutrust/blob/main/examples/emutrust_colab.ipynb) walks through every step with plots, in about 5 minutes and with nothing to install.
 
